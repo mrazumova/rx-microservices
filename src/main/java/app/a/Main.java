@@ -2,7 +2,10 @@ package app.a;
 
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
+import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.core.Single;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -11,6 +14,9 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class Main {
 
@@ -27,27 +33,24 @@ public class Main {
 
     private static HttpHandler handle() {
         return httpExchange -> {
-
-            Single<String> callB = asyncCall("http://localhost:8090/test");
-
-            Single<String> callC = asyncCall("http://localhost:80/test");
-
-            Single<String> single = callB.zipWith(callC, String::concat).doOnSuccess(
-                    result -> {
-                        httpExchange.sendResponseHeaders(200, 0);
-                        OutputStream outputStream = httpExchange.getResponseBody();
-                        outputStream.write(result.getBytes());
-                        outputStream.flush();
-                        outputStream.close();
-                    }
-            );
-
-            single.subscribe();
+            Observable<String> callB = asyncCall("http://localhost:8090/test").subscribeOn(Schedulers.computation());
+            Observable<String> callC = asyncCall("http://localhost:80/test").subscribeOn(Schedulers.computation());
+            
+            Observable
+                    .zip(callB, callC, String::concat)
+                    .subscribe(result -> {
+                                httpExchange.sendResponseHeaders(200, 0);
+                                OutputStream outputStream = httpExchange.getResponseBody();
+                                outputStream.write(result.getBytes());
+                                outputStream.flush();
+                                outputStream.close();
+                            }
+                    );
         };
     }
 
-    private static Single<String> asyncCall(String url) {
-        return Single.fromCallable(
+    private static Observable<String> asyncCall(String url) {
+        return Observable.fromCallable(
                 () -> {
                     URI uri = new URI(url);
                     HttpClient client = HttpClient.newHttpClient();

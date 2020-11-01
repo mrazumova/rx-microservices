@@ -17,7 +17,10 @@ public class Main {
             server.bind(new InetSocketAddress(8090), 0);
             server.createContext("/test",
                     httpExchange -> {
+
                         logger.info("Incoming request..." + httpExchange.getRemoteAddress() + httpExchange.getRequestURI().toString());
+
+                        sleep();
                         OutputStream outputStream = httpExchange.getResponseBody();
 
                         String response = "--- Hello from B --- \n";
@@ -35,6 +38,14 @@ public class Main {
             System.out.println(e.getMessage());
         }
 
+    }
+
+    private static void sleep() {
+        try {
+            Thread.sleep(10000);
+        } catch (InterruptedException e) {
+            logger.info(e.getMessage());
+        }
     }
 }
 
